@@ -4,9 +4,6 @@ on:
   push:
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,7 +22,7 @@ jobs:
 
     - name: Compile code
       run: |
-        arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 .
+        arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 --output-dir build .
 
     - name: Upload BIN
       uses: actions/upload-artifact@v4
