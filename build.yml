@@ -1,0 +1,21 @@
+name: Build ESP8266 BIN
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: arduino/setup-arduino-cli@v1
+
+    - run: |
+        arduino-cli core update-index
+        arduino-cli core install esp8266:esp8266
+
+    - run: |
+        arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 .
