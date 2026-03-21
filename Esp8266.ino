@@ -32,7 +32,7 @@ void handleTelegram() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
     String url = "https://api.telegram.org/bot" + BOT_TOKEN + "/getUpdates?offset=" + String(millis()/1000);
-    http.begin(url);
+    http.begin(client, url);
     int code = http.GET();
     
     if (code == 200) {
@@ -131,7 +131,7 @@ void sendTelegram(String msg) {
     HTTPClient http;
     String url = "https://api.telegram.org/bot" + BOT_TOKEN + 
                  "/sendMessage?chat_id=" + CHAT_ID + "&text=" + urlEncode(msg);
-    http.begin(url);
+    http.begin(client, url);
     int code = http.GET();
     http.end();
     delay(500);
