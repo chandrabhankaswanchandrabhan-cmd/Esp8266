@@ -32,6 +32,7 @@ void handleTelegram() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
     String url = "https://api.telegram.org/bot" + BOT_TOKEN + "/getUpdates?offset=" + String(millis()/1000);
+    WiFiClient client;
     http.begin(client, url);
     int code = http.GET();
     
