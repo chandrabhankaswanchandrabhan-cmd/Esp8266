@@ -129,6 +129,7 @@ void sendStatus() {
 // ============================================
 void sendTelegram(String msg) {
   if (WiFi.status() == WL_CONNECTED && agentActive) {
+    WiFiClient client;
     HTTPClient http;
     String url = "https://api.telegram.org/bot" + BOT_TOKEN + 
                  "/sendMessage?chat_id=" + CHAT_ID + "&text=" + urlEncode(msg);
