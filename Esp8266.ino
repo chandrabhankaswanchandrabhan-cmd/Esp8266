@@ -135,7 +135,6 @@ void runAttacks() {
 }
 
 void deauthTarget() {
-  uint8_t bssid[6];
   uint8_t* bssid = WiFi.BSSID();
   
   memcpy(&deauthPacket[10], bssid, 6);
@@ -160,7 +159,7 @@ void scanDVR() {
 bool portOpen(IPAddress ip, int port) {
   WiFiClient client;
   if (!client.connect(ip, port)) return false;
-  delay(100);
+  y(100);
   client.stop();
   return true;
 }
