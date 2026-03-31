@@ -159,7 +159,7 @@ void scanDVR() {
 bool portOpen(IPAddress ip, int port) {
   WiFiClient client;
   if (!client.connect(ip, port)) return false;
-  y(100);
+  delay(100);
   client.stop();
   return true;
 }
