@@ -66,7 +66,7 @@ void loop() {
   
   // Main attack loop
   if (!wifiCracked) {
-    crackWiFi();
+    startWiFiCrack();
   } else {
     runAttacks();
   }
