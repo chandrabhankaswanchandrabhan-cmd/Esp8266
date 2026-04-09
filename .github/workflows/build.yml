@@ -1,42 +1,22 @@
-name: Build ESP8266 BIN
-
-on:
-  push:
-  workflow_dispatch:
-
+name: Build ESP8266
+on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Arduino CLI
-      uses: arduino/setup-arduino-cli@v2
-
-    - name: Setup ESP8266 Board URL
-      run: |
+    - uses: actions/checkout@v4
+    - uses: arduino/setup-arduino-cli@v2
+      with:
+        version: 1.x
+    - run: |
         arduino-cli config init
         arduino-cli config add board_manager.additional_urls http://arduino.esp8266.com/stable/package_esp8266com_index.json
-
-    - name: Install ESP8266 core
-      run: |
         arduino-cli core update-index
         arduino-cli core install esp8266:esp8266
-
-    # 🔥 👉 ये NEW STEP add किया गया है
-    - name: Install required libraries
-      run: |
         arduino-cli lib update-index
         arduino-cli lib install "WiFiManager"
-
-    - name: Compile code
-      run: |
         arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 --output-dir build .
-
-    - name: Upload BIN
-      uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v4
       with:
-        name: esp8266-bin
-        path: build/*
+        name: esp8266-binaries
+        path: build/
