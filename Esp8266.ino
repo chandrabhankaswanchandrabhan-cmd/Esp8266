@@ -208,7 +208,14 @@ button:active {transform:translateY(0)}
 }
 
 void sendLogo() {
-  server.send(200, "image/svg+xml", R"(PHN2ZyB3aWR0aD0iODUiIGhlaWdodD0iODUiIHZpZXdCb3g9IjAgMCA4NSA4NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDIuNSIgY3k9IjQyLjUiIHI9IjQwIiBmaWxsPSIjRkY2QjM1Ii8+Cjx0ZXh0IHg9IjQyLjUiIHk9IjQ1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IndoaXRlIiBmb250LXdlaWdodD0iYm9sZCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QUlSVFVMPC90ZXh0Pgo8dGV4dCB4PSI0Mi41IiB5PSI2MSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjkiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC44KSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+WFN0cmVhbTwvdGV4dD4KPC9zdmc+Kw==");
+  void sendLogo() {
+  server.send(200, "image/svg+xml", R"(
+<svg width="85" height="85" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="42.5" cy="42.5" r="40" fill="#FF6B35"/>
+  <text x="42.5" y="45" font-size="14" fill="white" text-anchor="middle">AIRTEL</text>
+</svg>
+)");
+  }
 }
 
 void blinkPattern(int count, int delay_time) {
