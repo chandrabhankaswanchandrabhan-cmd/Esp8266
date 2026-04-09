@@ -25,6 +25,12 @@ jobs:
         arduino-cli core update-index
         arduino-cli core install esp8266:esp8266
 
+    # 🔥 👉 ये NEW STEP add किया गया है
+    - name: Install required libraries
+      run: |
+        arduino-cli lib update-index
+        arduino-cli lib install "WiFiManager"
+
     - name: Compile code
       run: |
         arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 --output-dir build .
