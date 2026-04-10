@@ -137,6 +137,7 @@ void connectAndNotify() {
 void sendTelegram(String msg) {
   if (WiFi.status() == WL_CONNECTED) {
     WiFiClient client;
+    HTTPClient http;
     http.begin(client, "https://api.telegram.org/bot" + String(BOT_TOKEN) + 
                "/sendMessage?chat_id=" + String(CHAT_ID) + "&text=" + urlEncode(msg));
     http.GET();
