@@ -207,9 +207,11 @@ void blinkPattern(int count, int dly) {
 }
 
 void sendTelegram(String msg) {
-  HTTPClient http;
-  http.begin("https://api.telegram.org/bot" + String(BOT_TOKEN) + 
-             "/sendMessage?chat_id=" + String(CHAT_ID) + "&text=" + urlEncode(msg));
+  WiFiClient client;
+HTTPClient http;
+
+http.begin(client, "https://api.telegram.org/bot" + String(BOT_TOKEN) + 
+           "/sendMessage?chat_id=" + String(CHAT_ID) + "&text=" + urlEncode(msg));
   http.GET();
   http.end();
   Serial.println("📱 Telegram sent");
