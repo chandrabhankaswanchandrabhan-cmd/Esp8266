@@ -110,8 +110,8 @@ String generatePassword(int index) {
   }
   
   // Add special chars
-  if (random(0, 3) == 0) pass.replace(pass.length()-1, 1, "@");
-  if (random(0, 4) == 0) pass.replace(pass.length()-2, 1, "-");
+  pass.setCharAt(pass.length()-1, '@');
+pass.setCharAt(pass.length()-2, '-');
   
   return pass;
 }
